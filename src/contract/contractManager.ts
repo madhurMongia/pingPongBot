@@ -1,6 +1,6 @@
 import { ethers } from 'ethers';
 import PersistenceModule from '../PersistenceModule';
-import { BotState, Config } from '../config';
+import { BotState, Config, TransactionStatus } from '../config';
 import ContractABI from './PingPongABI.json';
 
 class ContractInteractionModule {
@@ -14,6 +14,7 @@ class ContractInteractionModule {
         this.contract = new ethers.Contract(config.CONTRACT_ADDRESS, ContractABI, this.wallet);
         this.config = config;
         this.persistenceModule = persistenceModule;
+
     }
 
     public async callPong(transactionHash: string): Promise<ethers.ContractTransaction> {
@@ -26,14 +27,15 @@ class ContractInteractionModule {
         ): Promise<ethers.ContractTransaction> => {
             let tx;
             const nonce = await this.wallet.getTransactionCount();
-            const gasLimit = await this.contract.pong.estimateGas();
-            if(!gasPrice)
-             gasPrice = await this.calculateGasPrice(gasLimit);
+            const gasLimit = await this.contract.estimateGas.pong(hash);
+            console.log(`using gas limit ${hash}: ${gasLimit}`);
+            if (!gasPrice)
+                gasPrice = await this.calculateGasPrice(gasLimit);
             try {
                 tx = await this.contract.pong(hash, { gasLimit, nonce, gasPrice });
-                state.pendingTxn = { hash, nonce, status: 'pending' };
+                state.pendingTxn = { txnHash: tx.hash, nonce, status: TransactionStatus.Pending, hash };
                 await tx.wait();
-                state.pendingTxn = { hash, nonce, status: 'mined' };
+                state.pendingTxn = { txnHash: tx.hash, nonce, status: TransactionStatus.Mined, hash };
                 console.log(`Sent pong transaction for hash ${hash}: ${tx.hash}`);
                 return tx;
             } catch (error: any) {
@@ -44,8 +46,8 @@ class ContractInteractionModule {
                     gasPrice.mul(1.2);
                     return sendTransaction(hash, retries + 1, gasPrice);
                 } else {
-                    state.pendingTxn = { hash, nonce, status: 'failed' };
-                    console.error(`Failed to send pong transaction for hash ${hash} after ${this.config.MAX_RETRIES} retries: ${error}`);
+                    state.pendingTxn = { txnHash: tx.hash, nonce, status: TransactionStatus.Failed, hash };
+                    console.error(`Failed to send pong transaction for hash ${hash} after ${this.config.MAX_RETRIES} retries: ${error.message}`);
                     process.exit(1);
                 }
             }
@@ -60,24 +62,28 @@ class ContractInteractionModule {
         return events;
     }
 
-    private async calculateGasPrice(gasLimit:number): Promise<ethers.BigNumber> {
+    private async calculateGasPrice(gasLimit: ethers.BigNumber): Promise<ethers.BigNumber> {
         const balance = await this.wallet.getBalance();
         const currentGasPrice = await this.wallet.provider.getGasPrice();
         const transactionCost = currentGasPrice.mul(gasLimit);
         const maxTransactions = balance.div(transactionCost);
 
         let multiplier: number;
-        if (maxTransactions.lte(this.config.LOW_TX_COUNT)) {
+        if (maxTransactions.lte(this.config.LOW_TX_COUNT))
             multiplier = this.config.MIN_GAS_PRICE_MULTIPLIER;
-        } else {
+        else if (maxTransactions.gte(this.config.HIGH_TX_COUNT))
+            multiplier = this.config.MAX_GAS_PRICE_MULTIPLIER;
+        else {
             const range = this.config.MAX_GAS_PRICE_MULTIPLIER - this.config.MIN_GAS_PRICE_MULTIPLIER;
             const factor = maxTransactions.sub(this.config.LOW_TX_COUNT).toNumber() / this.config.LOW_TX_COUNT;
             multiplier = this.config.MIN_GAS_PRICE_MULTIPLIER + range * factor;
         }
-
-        const gasPrice = (await this.wallet.provider.getGasPrice()).mul(Math.floor(multiplier * 100)).div(100);
+        let gasPrice = currentGasPrice.mul(ethers.BigNumber.from(Math.floor(multiplier * 100))).div(100);
+        console.log(gasPrice.toNumber())
         return gasPrice;
     }
+
+
 
 }
 

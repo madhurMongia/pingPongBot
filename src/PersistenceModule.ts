@@ -6,40 +6,49 @@ class PersistenceModule {
     
     constructor(dataDirectory: string) {
         this.dataDirectory = dataDirectory;
-        fs.mkdirSync(this.dataDirectory, { recursive: true });
+        this.createDataDirectory();
+    }
+
+    private createDataDirectory(): void {
+        if (!fs.existsSync(this.dataDirectory)) {
+            fs.mkdirSync(this.dataDirectory, { recursive: true });
+            console.log(`Data directory created at ${this.dataDirectory}`);
+        }
     }
 
     private async saveState(key: string, value: any): Promise<void> {
         const filePath = path.join(this.dataDirectory, `${key}.json`);
         const data = JSON.stringify(value, null, 2);
         await fs.promises.writeFile(filePath, data);
+        console.log(`State saved to file: ${filePath}`);
     }
 
-    public loadState<T extends object>(key: string, defaultValue?: T):T{
+    public loadState<T extends object>(key: string, defaultValue?: T): T {
         const filePath = path.join(this.dataDirectory, `${key}.json`);
         try {
+            console.log(`Loading state from file: ${filePath}`);
+            if (!fs.existsSync(filePath)) {
+                console.log(`State file not found. Using default value.`);
+                return defaultValue || {} as T;
+            }
+
             const data = fs.readFileSync(filePath, 'utf8');
             const state = JSON.parse(data) as T;
+            console.log(`State loaded successfully from file: ${filePath}`);
             return new Proxy(state, {
-                set: (target:any, prop: string, value: any) => {
+                set: (target: any, prop: string, value: any) => {
                     target[prop] = value;
                     this.saveState(key, target);
+                    console.log(`State updated and saved to file: ${filePath}`);
                     return true;
                 },
             });
         } catch (error) {
-            console.log(`Could not read state from file. Using default value.`);
-            const initialState = defaultValue || {} ;
-            return new Proxy(initialState, {
-                set: (target:any, prop: string, value: any) => {
-                    target[prop] = value;
-                    this.saveState(key, target);
-                    return true;
-                },
-            });
+            console.error(`Error reading state from file: ${filePath}`, error);
+            console.log(`Using default value.`);
+            return defaultValue || {} as T;
         }
     }
 }
 
 export default PersistenceModule;
-

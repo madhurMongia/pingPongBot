@@ -6,18 +6,20 @@ class ProviderManager {
     private currentProviderIndex = 0;
     private reconnectInterval: number;
 
-    constructor(providerUrls: string[], reconnectInterval: number = 5000) {
+    constructor(providerUrls: string[], reconnectInterval: number = 50000) {
         this.providerUrls = providerUrls;
         this.reconnectInterval = reconnectInterval;
     }
 
     private async connectToProvider(url: string): Promise<ethers.providers.JsonRpcProvider> {
         try {
+            console.log(`Connecting to provider ${url}`);
             const provider = new ethers.providers.JsonRpcProvider(url);
             await provider.getNetwork();
+            console.log(`Successfully connected to provider ${url}`);
             return provider;
-        } catch (error) {
-            console.error(`Failed to connect to provider ${url}:`, error);
+        } catch (error:any) {
+            console.error(`Failed to connect to provider ${url}:`, error.message);
             throw error;
         }
     }
@@ -63,6 +65,7 @@ class ProviderManager {
             }
         };
 
+        console.log(`Starting reconnection timer with interval ${this.reconnectInterval} ms`);
         setTimeout(reconnect, this.reconnectInterval);
     }
 }

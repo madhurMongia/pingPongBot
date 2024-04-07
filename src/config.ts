@@ -1,46 +1,57 @@
 import dotenv from 'dotenv';
-import { ethers } from 'ethers';
 
 dotenv.config();
 
 export interface Config {
-  MIN_GAS_PRICE_MULTIPLIER: any;
-  MAX_GAS_PRICE_MULTIPLIER: any;
-  LOW_TX_COUNT: number;
-  INFURA_PROJECT_ID: string;
-  PRIVATE_KEY: string;
-  CONTRACT_ADDRESS: string;
-  CONTRACT_ABI: any;
-  MAX_RETRIES: number;
-  PROVIDER_URL: string;
-  NEW_BLOCK_EVENT: string;
-  PING_EVENT: string;
-  BOT_STATE_KEY: string;
+    HIGH_TX_COUNT: number;
+    MIN_GAS_PRICE_MULTIPLIER: number;
+    MAX_GAS_PRICE_MULTIPLIER: number;
+    LOW_TX_COUNT: number;
+    PRIVATE_KEY: string;
+    CONTRACT_ADDRESS: string;
+    MAX_RETRIES: number;
+    NEW_BLOCK_EVENT: string;
+    PING_EVENT: string;
+    BOT_STATE_KEY: string;
+    ALCHEMY_PRIVATE_KEY: string;
+    CHAINSTACK_PRIVATE_KEY: string;
+    ALCHEMY_NODE_ENDPOINT: string;
+    CHAINSTACK_NODE_ENDPOINT: string;
+    PUBLIC_NODE_ENDPOINT:string;
+}
+export enum TransactionStatus {
+    Pending = 'pending',
+    Mined = 'mined',
+    Failed = 'failed'
 }
 
 export interface BotState {
-    lastProcessedBlock : number,
+    lastProcessedBlock: number,
     lastProcessedEventIndex: number,
-    pendingTxn: {
+    pendingTxn?: {
         nonce: number,
-        status : 'pending' | 'mined' | 'failed',
-        hash : string
-    } | {}
+        status: TransactionStatus
+        hash: string,
+        txnHash: string,
+    };
 }
 
 const config: Config = {
-    INFURA_PROJECT_ID: process.env.INFURA_PROJECT_ID || '',
     PRIVATE_KEY: process.env.PRIVATE_KEY || '',
     CONTRACT_ADDRESS: process.env.CONTRACT_ADDRESS || '',
-    CONTRACT_ABI: process.env.CONTRACT_ABI ? JSON.parse(process.env.CONTRACT_ABI) : [],
     MAX_RETRIES: parseInt(process.env.MAX_RETRIES || '3', 10),
-    LOW_TX_COUNT: parseInt(process.env.LOW_TX_COUNT || '50', 10),
-    PROVIDER_URL: process.env.PROVIDER_URL || 'https://sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID',
+    LOW_TX_COUNT: parseInt(process.env.LOW_TX_COUNT || '10000', 10),
+    HIGH_TX_COUNT: parseInt(process.env.HIGH_TX_COUNT || '500000', 10),
     NEW_BLOCK_EVENT: 'block',
     PING_EVENT: 'Ping',
     BOT_STATE_KEY: 'bot-state',
-    MIN_GAS_PRICE_MULTIPLIER: undefined,
-    MAX_GAS_PRICE_MULTIPLIER: undefined
+    MIN_GAS_PRICE_MULTIPLIER: parseFloat(process.env.MIN_GAS_PRICE_MULTIPLIER || '0.8'),
+    MAX_GAS_PRICE_MULTIPLIER: parseFloat(process.env.MAX_GAS_PRICE_MULTIPLIER || '1.2'),
+    ALCHEMY_PRIVATE_KEY: process.env.ALCHEMY_PRIVATE_KEY || '',
+    CHAINSTACK_PRIVATE_KEY: process.env.CHAINSTACK_PRIVATE_KEY || '',
+    ALCHEMY_NODE_ENDPOINT: process.env.ALCHEMY_NODE_ENDPOINT || '',
+    CHAINSTACK_NODE_ENDPOINT : process.env.CHAINSTACK_NODE_ENDPOINT || '',
+    PUBLIC_NODE_ENDPOINT: process.env.PUBLIC_NODE_ENDPOINT || 'https://ethereum-sepolia-rpc.publicnode.com'
 };
 
 export default config;
