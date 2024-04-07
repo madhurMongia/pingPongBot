@@ -18,7 +18,7 @@ class ContractInteractionModule {
     }
 
     public async callPong(transactionHash: string): Promise<ethers.ContractTransaction> {
-        const state = this.persistenceModule.loadState<BotState>(this.config.BOT_STATE_KEY);
+        const state = this.persistenceModule.getState<BotState>(this.config.BOT_STATE_KEY);
 
         const sendTransaction = async (
             hash: string,
@@ -43,10 +43,10 @@ class ContractInteractionModule {
                     const delay = 2 ** retries * 1000; // Exponential backoff
                     console.log(`Retrying pong transaction for hash ${hash} in ${delay / 1000} seconds...`);
                     await new Promise(resolve => setTimeout(resolve, delay));
-                    gasPrice.mul(1.2);
+                    gasPrice.mul(ethers.utils.parseEther('1.2'));
                     return sendTransaction(hash, retries + 1, gasPrice);
                 } else {
-                    state.pendingTxn = { txnHash: tx.hash, nonce, status: TransactionStatus.Failed, hash };
+                    state.pendingTxn = { txnHash: error.transaction.hash, nonce, status: TransactionStatus.Failed, hash };
                     console.error(`Failed to send pong transaction for hash ${hash} after ${this.config.MAX_RETRIES} retries: ${error.message}`);
                     process.exit(1);
                 }

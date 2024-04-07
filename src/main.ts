@@ -5,31 +5,31 @@ import ContractInteractionModule from './contract/contractManager';
 
 async function main() {
   console.log("Initializing bot...");
-
   const providerUrls = [
     `${config.ALCHEMY_NODE_ENDPOINT}/${config.ALCHEMY_PRIVATE_KEY}`,
     `${config.CHAINSTACK_NODE_ENDPOINT}/${config.CHAINSTACK_PRIVATE_KEY}`,
     config.PUBLIC_NODE_ENDPOINT,
   ];
-
   const providerManager = new ProviderManager(providerUrls);
   let provider = null;
+  const processedEvents = new Set();
+  const newBlockQueue: number[] = [];
+  let processingQueue = false;
 
   while (!provider) {
     try {
       provider = await providerManager.getProvider();
     } catch (error) {
       console.error("No provider available. Retrying in 10 seconds...");
-      await new Promise(resolve => setTimeout(resolve, 10000));
+      await new Promise((resolve) => setTimeout(resolve, 10000));
     }
   }
 
-  const storage = new PersistenceModule('/storage');
+  const storage = new PersistenceModule();
   const contract = new ContractInteractionModule(provider, storage, config);
-
   let state: BotState;
   const currentBlock = await provider.getBlockNumber();
-  state = storage.loadState<BotState>(config.BOT_STATE_KEY, {
+  state = storage.getState<BotState>(config.BOT_STATE_KEY, {
     lastProcessedBlock: currentBlock,
     lastProcessedEventIndex: 0,
   });
@@ -45,22 +45,40 @@ async function main() {
       await contract.callPong(state.pendingTxn.hash);
     }
   }
-  provider.on(config.NEW_BLOCK_EVENT, async (blockNumber) => {
-    console.log(`New block detected: ${blockNumber}`);
-    const events = await contract.getFilterEvents(state.lastProcessedBlock, blockNumber);
-    console.log(`Number of events found ${events.length}`);
-    for (let i = state.lastProcessedEventIndex; i < events.length; i++) {
-      const event = events[i];
-      console.log(`Ping event found in block ${event.blockNumber}, txHash=${event.transactionHash}`);
-      await contract.callPong(event.transactionHash);
-      state.lastProcessedEventIndex = i + 1;
+
+  provider.on(config.NEW_BLOCK_EVENT, (blockNumber) => {
+    newBlockQueue.push(blockNumber);
+    if (!processingQueue) {
+      processingQueue = true;
+      processNewBlockQueue();
     }
-    state.lastProcessedBlock = blockNumber;
   });
+
+  async function processNewBlockQueue() {
+    while (newBlockQueue.length > 0) {
+      const blockNumber = newBlockQueue.shift()!;
+      console.log(`New block detected: ${blockNumber}`);
+      console.log({ blockNumber, state });
+      const events = await contract.getFilterEvents(state.lastProcessedBlock, blockNumber);
+      console.log(`Number of events found ${events.length}`, events);
+      for (let i = state.lastProcessedEventIndex; i < events.length; i++) {
+        const event = events[i];
+        console.log(`Ping event found in block ${event.blockNumber}, txHash=${event.transactionHash}`);
+        await contract.callPong(event.transactionHash);
+        state.lastProcessedEventIndex = i + 1;
+      }
+      state.lastProcessedBlock = blockNumber;
+      state.lastProcessedEventIndex = events.length
+      console.log(`after loop`, { blockNumber, state });
+    }
+    processingQueue = false;
+  }
 }
 
-main().then(() => {
-  console.log(`Bot started successfully.`);
-}).catch((error) => {
-  console.error(`Error starting bot:`, error);
-});
+main()
+  .then(() => {
+    console.log(`Bot started successfully.`);
+  })
+  .catch((error) => {
+    console.error(`Error starting bot:`, error);
+  });
