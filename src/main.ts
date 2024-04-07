@@ -5,16 +5,26 @@ import ContractInteractionModule from './contract/contractManager';
 
 async function main() {
   console.log("Initializing bot...");
+
   const providerUrls = [
     `${config.ALCHEMY_NODE_ENDPOINT}/${config.ALCHEMY_PRIVATE_KEY}`,
     `${config.CHAINSTACK_NODE_ENDPOINT}/${config.CHAINSTACK_PRIVATE_KEY}`,
-     config.PUBLIC_NODE_ENDPOINT,
-  ]
+    config.PUBLIC_NODE_ENDPOINT,
+  ];
+
   const providerManager = new ProviderManager(providerUrls);
-  const provider = await providerManager.getProvider();
+  let provider = null;
+
+  while (!provider) {
+    try {
+      provider = await providerManager.getProvider();
+    } catch (error) {
+      console.error("No provider available. Retrying in 10 seconds...");
+      await new Promise(resolve => setTimeout(resolve, 10000));
+    }
+  }
 
   const storage = new PersistenceModule('/storage');
-
   const contract = new ContractInteractionModule(provider, storage, config);
 
   let state: BotState;
