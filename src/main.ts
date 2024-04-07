@@ -12,8 +12,8 @@ async function main() {
   ];
   const providerManager = new ProviderManager(providerUrls);
   let provider = null;
-  const processedEvents = new Set();
   const newBlockQueue: number[] = [];
+  const seenEvents = new Set();
   let processingQueue = false;
 
   while (!provider) {
@@ -58,18 +58,18 @@ async function main() {
     while (newBlockQueue.length > 0) {
       const blockNumber = newBlockQueue.shift()!;
       console.log(`New block detected: ${blockNumber}`);
-      console.log({ blockNumber, state });
       const events = await contract.getFilterEvents(state.lastProcessedBlock, blockNumber);
-      console.log(`Number of events found ${events.length}`, events);
+
       for (let i = state.lastProcessedEventIndex; i < events.length; i++) {
         const event = events[i];
+        if(seenEvents.has(event.transactionHash)) continue;
         console.log(`Ping event found in block ${event.blockNumber}, txHash=${event.transactionHash}`);
         await contract.callPong(event.transactionHash);
+        seenEvents.add(event.transactionHash);
         state.lastProcessedEventIndex = i + 1;
       }
       state.lastProcessedBlock = blockNumber;
-      state.lastProcessedEventIndex = events.length
-      console.log(`after loop`, { blockNumber, state });
+      state.lastProcessedEventIndex = (await contract.getFilterEvents(blockNumber, blockNumber)).length;
     }
     processingQueue = false;
   }

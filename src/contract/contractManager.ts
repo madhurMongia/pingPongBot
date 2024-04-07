@@ -79,7 +79,7 @@ class ContractInteractionModule {
             multiplier = this.config.MIN_GAS_PRICE_MULTIPLIER + range * factor;
         }
         let gasPrice = currentGasPrice.mul(ethers.BigNumber.from(Math.floor(multiplier * 100))).div(100);
-        console.log(gasPrice.toNumber())
+        console.log(`Current Mutiplier :`,multiplier);
         return gasPrice;
     }
 
