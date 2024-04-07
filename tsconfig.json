@@ -9,5 +9,6 @@
       "dom"
     ],
     "esModuleInterop": true,
+    "resolveJsonModule": true,
   }
 }

@@ -1,72 +1,52 @@
 import { ethers } from 'ethers';
 import PersistenceModule from '../PersistenceModule';
-import ProviderManager from '../ProviderManger';
-
-
-interface ContractInteractionModuleConfig {
-    contractAddress: string;
-    contractABI: ethers.ContractInterface;
-    privateKey: string;
-    maxRetries: number;
-    confirmations: number;
-    gasLimit: ethers.BigNumberish;
-    persistenceModule: PersistenceModule;
-}
+import { BotState, Config } from '../config';
+import ContractABI from './PingPongABI.json';
 
 class ContractInteractionModule {
     private contract: ethers.Contract;
     private wallet: ethers.Wallet;
-    private maxRetries: number;
-    private confirmations: number;
-    private gasLimit: ethers.BigNumberish;
-    private nonces: { [address: string]: number } = {};
+    private config: Config;
     private persistenceModule: PersistenceModule;
-    private readonly nonceStateKey = 'nonce-state';
-    private pendingTransactions: {
-        [hash: string]: {
-            nonce: number;
-            retries: number;
-            gasPrice?: ethers.BigNumberish;
-        };
-    } = {};
 
-    constructor(provider: ethers.providers.JsonRpcProvider, config: ContractInteractionModuleConfig) {
-        this.wallet = new ethers.Wallet(config.privateKey, provider);
-        this.contract = new ethers.Contract(config.contractAddress, config.contractABI, this.wallet);
-        this.maxRetries = config.maxRetries;
-        this.confirmations = config.confirmations;
-        this.gasLimit = config.gasLimit;
-        this.persistenceModule = config.persistenceModule;
+    constructor(provider: ethers.providers.JsonRpcProvider, persistenceModule: PersistenceModule, config: Config) {
+        this.wallet = new ethers.Wallet(config.PRIVATE_KEY, provider);
+        this.contract = new ethers.Contract(config.CONTRACT_ADDRESS, ContractABI, this.wallet);
+        this.config = config;
+        this.persistenceModule = persistenceModule;
     }
 
     public async callPong(transactionHash: string): Promise<ethers.ContractTransaction> {
-        const nonce = await this.getNonce(this.wallet.address);
-        this.pendingTransactions[transactionHash] = { nonce, retries: 0 };
+        const state = this.persistenceModule.loadState<BotState>(this.config.BOT_STATE_KEY);
 
         const sendTransaction = async (
             hash: string,
             retries = 0,
-            gasPrice?: ethers.BigNumberish
+            gasPrice?: ethers.BigNumber
         ): Promise<ethers.ContractTransaction> => {
+            let tx;
+            const nonce = await this.wallet.getTransactionCount();
+            const gasLimit = await this.contract.pong.estimateGas();
+            if(!gasPrice)
+             gasPrice = await this.calculateGasPrice(gasLimit);
             try {
-                const tx = await this.contract.pong(hash, { gasLimit: this.gasLimit, nonce, gasPrice });
-                await tx.wait(this.confirmations);
+                tx = await this.contract.pong(hash, { gasLimit, nonce, gasPrice });
+                state.pendingTxn = { hash, nonce, status: 'pending' };
+                await tx.wait();
+                state.pendingTxn = { hash, nonce, status: 'mined' };
                 console.log(`Sent pong transaction for hash ${hash}: ${tx.hash}`);
-                delete this.pendingTransactions[hash];
                 return tx;
             } catch (error: any) {
-                if (retries < this.maxRetries && error.code === 'UNPREDICTABLE_GAS_LIMIT') {
-                    const gasLimit = error.gasLimit * 1.2; // Increase gas limit by 20%
-                    return sendTransaction(hash, retries + 1, gasLimit);
-                } else if (retries < this.maxRetries) {
+                if (retries < this.config.MAX_RETRIES) {
                     const delay = 2 ** retries * 1000; // Exponential backoff
                     console.log(`Retrying pong transaction for hash ${hash} in ${delay / 1000} seconds...`);
                     await new Promise(resolve => setTimeout(resolve, delay));
+                    gasPrice.mul(1.2);
                     return sendTransaction(hash, retries + 1, gasPrice);
                 } else {
-                    console.error(`Failed to send pong transaction for hash ${hash} after ${this.maxRetries} retries: ${error}`);
-                    delete this.pendingTransactions[hash];
-                    throw error;
+                    state.pendingTxn = { hash, nonce, status: 'failed' };
+                    console.error(`Failed to send pong transaction for hash ${hash} after ${this.config.MAX_RETRIES} retries: ${error}`);
+                    process.exit(1);
                 }
             }
         };
@@ -75,41 +55,31 @@ class ContractInteractionModule {
         return transaction;
     }
 
-    private async getNonce(address: string): Promise<number> {
-        const nonces = await this.persistenceModule.loadState<{ [address: string]: number }>(this.nonceStateKey, {}) || {};
-        if (!nonces[address]) {
-            nonces[address] = await this.wallet.getTransactionCount();
-        }
-        const nonce = nonces[address];
-        nonces[address]++;
-        await this.persistenceModule.saveState(this.nonceStateKey, nonces);
-        return nonce;
+    public async getFilterEvents(fromBlock: number, toBlock: number): Promise<ethers.Event[]> {
+        const events = await this.contract.queryFilter(this.config.PING_EVENT, fromBlock, toBlock);
+        return events;
     }
 
-    public async processQueue(): Promise<void> {
-        const wallet = this.wallet;
-        const contract = this.contract;
-        const gasLimit = this.gasLimit;
-        const maxRetries = this.maxRetries;
-        const confirmations = this.confirmations;
+    private async calculateGasPrice(gasLimit:number): Promise<ethers.BigNumber> {
+        const balance = await this.wallet.getBalance();
+        const currentGasPrice = await this.wallet.provider.getGasPrice();
+        const transactionCost = currentGasPrice.mul(gasLimit);
+        const maxTransactions = balance.div(transactionCost);
 
-        const nonce = await this.getNonce(wallet.address);
-        const pendingTransactions = Object.entries(this.pendingTransactions)
-            .filter(([_, { nonce: txNonce }]) => txNonce < nonce)
-            .sort(([_, { nonce: a }], [__, { nonce: b }]) => a - b)
-            .map(([hash, { retries, gasPrice }]) => ({ hash, retries, gasPrice }));
-
-        for (const { hash, retries, gasPrice } of pendingTransactions) {
-            try {
-                const tx = await contract.pong(hash, { gasLimit, nonce: this.pendingTransactions[hash].nonce, gasPrice });
-                await tx.wait(confirmations);
-                console.log(`Sent pong transaction for hash ${hash}: ${tx.hash}`);
-                delete this.pendingTransactions[hash];
-            } catch (error) {
-                console.error(`Error sending pong transaction for hash ${hash}:`, error);
-            }
+        let multiplier: number;
+        if (maxTransactions.lte(this.config.LOW_TX_COUNT)) {
+            multiplier = this.config.MIN_GAS_PRICE_MULTIPLIER;
+        } else {
+            const range = this.config.MAX_GAS_PRICE_MULTIPLIER - this.config.MIN_GAS_PRICE_MULTIPLIER;
+            const factor = maxTransactions.sub(this.config.LOW_TX_COUNT).toNumber() / this.config.LOW_TX_COUNT;
+            multiplier = this.config.MIN_GAS_PRICE_MULTIPLIER + range * factor;
         }
+
+        const gasPrice = (await this.wallet.provider.getGasPrice()).mul(Math.floor(multiplier * 100)).div(100);
+        return gasPrice;
     }
+
 }
 
 export default ContractInteractionModule;
+
