@@ -10,15 +10,14 @@ async function main() {
     `${config.CHAINSTACK_NODE_ENDPOINT}/${config.CHAINSTACK_PRIVATE_KEY}`,
     config.PUBLIC_NODE_ENDPOINT,
   ];
-  const providerManager = new ProviderManager(providerUrls);
-  let provider = null;
   let newBlockArray: number[] = [];
   const seenEvents = new Set();
   let processingBlocks = false;
-  provider = await providerManager.getProvider();
-
+  
+  let provider = await new ProviderManager(providerUrls).getProvider();
   const storage = new PersistenceModule();
   const contract = new ContractInteractionModule(provider, storage, config);
+
   let state: BotState;
   const currentBlock = await provider.getBlockNumber();
   state = storage.getState<BotState>(config.BOT_STATE_KEY, {
@@ -36,7 +35,10 @@ async function main() {
     } else {
       await contract.callPong(state.pendingTxn.hash);
     }
+    state.lastProcessedEventIndex =  state.lastProcessedEventIndex +1;
+    delete state.pendingTxn;
   }
+
    newBlockArray = Array.from({length: currentBlock - state.lastProcessedBlock + 1}, (_, i) => state.lastProcessedBlock + i +1);
    processingBlocks = true;
    processNewBlockArray();
@@ -70,7 +72,7 @@ async function main() {
 }
 
 function startBot() {
-  let restartsleft = 5;
+  let restartsleft = config.MAX_BOT_RESTART_ATTEMPTS;
   main()
    .then(() => {
       console.log(`Bot started successfully.`);

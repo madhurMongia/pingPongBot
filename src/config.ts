@@ -18,6 +18,7 @@ export interface Config {
     ALCHEMY_NODE_ENDPOINT: string;
     CHAINSTACK_NODE_ENDPOINT: string;
     PUBLIC_NODE_ENDPOINT:string;
+    MAX_BOT_RESTART_ATTEMPTS: number;
 }
 export enum TransactionStatus {
     Pending = 'pending',
@@ -51,7 +52,8 @@ const config: Config = {
     CHAINSTACK_PRIVATE_KEY: process.env.CHAINSTACK_PRIVATE_KEY || '',
     ALCHEMY_NODE_ENDPOINT: process.env.ALCHEMY_NODE_ENDPOINT || '',
     CHAINSTACK_NODE_ENDPOINT : process.env.CHAINSTACK_NODE_ENDPOINT || '',
-    PUBLIC_NODE_ENDPOINT: process.env.PUBLIC_NODE_ENDPOINT || 'https://ethereum-sepolia.rpc.subquery.network/public'
+    PUBLIC_NODE_ENDPOINT: process.env.PUBLIC_NODE_ENDPOINT || 'https://ethereum-sepolia.rpc.subquery.network/public',
+    MAX_BOT_RESTART_ATTEMPTS : parseInt(process.env.PUBLIC_NODE_ENDPOINT ||'10') 
 };
 
 export default config;
