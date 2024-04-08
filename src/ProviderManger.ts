@@ -18,7 +18,7 @@ class ProviderManager {
             await provider.getNetwork();
             console.log(`Successfully connected to provider ${url}`);
             return provider;
-        } catch (error:any) {
+        } catch (error: any) {
             console.error(`Failed to connect to provider ${url}:`, error.message);
             throw error;
         }
@@ -37,16 +37,14 @@ class ProviderManager {
     }
 
     private async initializeProviders(): Promise<void> {
-        console.log(process.pid);
         for (const url of this.providerUrls) {
             try {
                 const provider = await this.connectToProvider(url);
                 this.providers.push(provider);
-            } catch (error) {
-                console.error(`Failed to initialize provider ${url}:`, error);
+            } catch (error: any) {
+                console.error(`Failed to initialize provider ${url}:`, error.message);
             }
         }
-
         if (this.providers.length > 0) {
             this.startReconnectionTimer();
         }
@@ -58,8 +56,8 @@ class ProviderManager {
                 const newProvider = await this.connectToProvider(this.providerUrls[this.currentProviderIndex]);
                 this.providers[this.currentProviderIndex] = newProvider;
                 console.log(`Successfully reconnected to provider ${this.providerUrls[this.currentProviderIndex]}`);
-            } catch (error) {
-                console.error(`Failed to reconnect to provider ${this.providerUrls[this.currentProviderIndex]}:`, error);
+            } catch (error: any) {
+                console.error(`Failed to reconnect to provider ${this.providerUrls[this.currentProviderIndex]}:`, error.message);
                 this.currentProviderIndex = (this.currentProviderIndex + 1) % this.providers.length;
             } finally {
                 setTimeout(reconnect, this.reconnectInterval);

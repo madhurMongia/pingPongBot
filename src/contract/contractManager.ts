@@ -10,6 +10,8 @@ class ContractInteractionModule {
     private persistenceModule: PersistenceModule;
 
     constructor(provider: ethers.providers.JsonRpcProvider, persistenceModule: PersistenceModule, config: Config) {
+        if (!config.PRIVATE_KEY.length)
+            throw new Error("Invalid private key")
         this.wallet = new ethers.Wallet(config.PRIVATE_KEY, provider);
         this.contract = new ethers.Contract(config.CONTRACT_ADDRESS, ContractABI, this.wallet);
         this.config = config;
@@ -79,7 +81,7 @@ class ContractInteractionModule {
             multiplier = this.config.MIN_GAS_PRICE_MULTIPLIER + range * factor;
         }
         let gasPrice = currentGasPrice.mul(ethers.BigNumber.from(Math.floor(multiplier * 100))).div(100);
-        console.log(`Current Mutiplier :`,multiplier);
+        console.log(`Current Mutiplier :`, multiplier);
         return gasPrice;
     }
 

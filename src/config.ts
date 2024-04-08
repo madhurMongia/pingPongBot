@@ -17,7 +17,7 @@ export interface Config {
     CHAINSTACK_PRIVATE_KEY: string;
     ALCHEMY_NODE_ENDPOINT: string;
     CHAINSTACK_NODE_ENDPOINT: string;
-    PUBLIC_NODE_ENDPOINT:string;
+    PUBLIC_NODE_ENDPOINT: string;
     MAX_BOT_RESTART_ATTEMPTS: number;
 }
 export enum TransactionStatus {
@@ -42,7 +42,7 @@ const config: Config = {
     CONTRACT_ADDRESS: process.env.CONTRACT_ADDRESS || '',
     MAX_RETRIES: parseInt(process.env.MAX_RETRIES || '3', 10),
     LOW_TX_COUNT: parseInt(process.env.LOW_TX_COUNT || '10000', 10),
-    HIGH_TX_COUNT: parseInt(process.env.HIGH_TX_COUNT || '500000', 10),
+    HIGH_TX_COUNT: parseInt(process.env.HIGH_TX_COUNT || '50000', 10),
     NEW_BLOCK_EVENT: 'block',
     PING_EVENT: 'Ping',
     BOT_STATE_KEY: 'bot-state',
@@ -51,9 +51,9 @@ const config: Config = {
     ALCHEMY_PRIVATE_KEY: process.env.ALCHEMY_PRIVATE_KEY || '',
     CHAINSTACK_PRIVATE_KEY: process.env.CHAINSTACK_PRIVATE_KEY || '',
     ALCHEMY_NODE_ENDPOINT: process.env.ALCHEMY_NODE_ENDPOINT || '',
-    CHAINSTACK_NODE_ENDPOINT : process.env.CHAINSTACK_NODE_ENDPOINT || '',
-    PUBLIC_NODE_ENDPOINT: process.env.PUBLIC_NODE_ENDPOINT || 'https://ethereum-sepolia.rpc.subquery.network/public',
-    MAX_BOT_RESTART_ATTEMPTS : parseInt(process.env.PUBLIC_NODE_ENDPOINT ||'10') 
+    CHAINSTACK_NODE_ENDPOINT: process.env.CHAINSTACK_NODE_ENDPOINT || '',
+    PUBLIC_NODE_ENDPOINT: process.env.PUBLIC_NODE_ENDPOINT || 'https://ethereum-sepolia-rpc.publicnode.com',
+    MAX_BOT_RESTART_ATTEMPTS: parseInt(process.env.PUBLIC_NODE_ENDPOINT || '10')
 };
 
 export default config;

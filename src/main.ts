@@ -13,7 +13,7 @@ async function main() {
   let newBlockArray: number[] = [];
   const seenEvents = new Set();
   let processingBlocks = false;
-  
+
   let provider = await new ProviderManager(providerUrls).getProvider();
   const storage = new PersistenceModule();
   const contract = new ContractInteractionModule(provider, storage, config);
@@ -26,7 +26,7 @@ async function main() {
   });
   console.log(`Bot state loaded:`, state);
 
-  if (state.pendingTxn && state.pendingTxn.status!== TransactionStatus.Mined) {
+  if (state.pendingTxn && state.pendingTxn.status !== TransactionStatus.Mined) {
     console.log(`Waiting for pending transaction ${state.pendingTxn.txnHash} to be mined...`);
     const txReceipt = await provider.waitForTransaction(state.pendingTxn.txnHash);
     if (txReceipt.status === 1) {
@@ -35,13 +35,13 @@ async function main() {
     } else {
       await contract.callPong(state.pendingTxn.hash);
     }
-    state.lastProcessedEventIndex =  state.lastProcessedEventIndex +1;
+    state.lastProcessedEventIndex = state.lastProcessedEventIndex + 1;
     delete state.pendingTxn;
   }
 
-   newBlockArray = Array.from({length: currentBlock - state.lastProcessedBlock + 1}, (_, i) => state.lastProcessedBlock + i +1);
-   processingBlocks = true;
-   processNewBlockArray();
+  newBlockArray = Array.from({ length: currentBlock - state.lastProcessedBlock + 1 }, (_, i) => state.lastProcessedBlock + i + 1);
+  processingBlocks = true;
+  processNewBlockArray();
   provider.on(config.NEW_BLOCK_EVENT, (blockNumber) => {
     newBlockArray.push(blockNumber);
     if (!processingBlocks) {
@@ -55,17 +55,17 @@ async function main() {
       const blockNumber = newBlockArray.shift()!;
       console.log(`New block detected: ${blockNumber}`);
       const events = await contract.getFilterEvents(blockNumber, blockNumber);
-
-      for (let i = state.lastProcessedEventIndex +1; i < events.length; i++) {
+      console.log(`Events: ${events}`);
+      for (let i = state.lastProcessedEventIndex + 1; i < events.length; i++) {
         const event = events[i];
-        if(seenEvents.has(event.transactionHash)) continue;
+        if (seenEvents.has(event.transactionHash)) continue;
         console.log(`Ping event found in block ${event.blockNumber}, txHash=${event.transactionHash}`);
         await contract.callPong(event.transactionHash);
         seenEvents.add(event.transactionHash);
-        state.lastProcessedEventIndex = i ;
+        state.lastProcessedEventIndex = i;
       }
       state.lastProcessedBlock = blockNumber;
-      state.lastProcessedEventIndex = 0;
+      state.lastProcessedEventIndex = -1;
     }
     processingBlocks = false;
   }
@@ -74,19 +74,19 @@ async function main() {
 function startBot() {
   let restartsleft = config.MAX_BOT_RESTART_ATTEMPTS;
   main()
-   .then(() => {
+    .then(() => {
       console.log(`Bot started successfully.`);
     })
-   .catch((error) => {
-    console.log(`bot failed with error: ${error.message}`);
-    if(restartsleft <=0) {
-      console.log(`maximum restart attempts reached ,manual restart required`);
-      return;
-    }
-      if (error.message !== 'No available providers') 
+    .catch((error) => {
+      console.log(`bot failed with error: ${error.message}`);
+      if (restartsleft <= 0) {
+        console.log(`maximum restart attempts reached ,manual restart required`);
+        return;
+      }
+      if (error.message !== 'No available providers')
         restartsleft--;
-        console.error(`No provider available. Restarting bot in 10 seconds...`);
-        setTimeout(startBot, 10000);
+      console.error(`No provider available. Restarting bot in 10 seconds...`);
+      setTimeout(startBot, 10000);
     });
 }
 
