@@ -4,11 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "npm run build && node dist/main.js",
-    "start": "npm run build && node dist/main.js",
-    "build": "tsc -p tsconfig.json",
-    "prod-build": "npm ci --only=production && npm run build",
-    "prod-start": "npm run build && node dist/main.js"
+    "start": "tsc && node dist/src/main.js",
+    "start:prod": "node -r ts-node/register/transpile-only -r tsconfig-paths/register ./dist/src/main.js",
+    "build": "npm run clean && tsc && npm run copy-files",
+    "clean": "rm -rf ./dist",
+    "copy-files": "cp ./package.json ./dist;cp ./tsconfig.json ./dist;"
   },
   "keywords": [],
   "author": "",
@@ -16,10 +16,12 @@
   "devDependencies": {
     "@types/node": "^20.12.4",
     "nodemon": "^3.1.0",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.4.3"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
-    "ethers": "5.7"
+    "ethers": "5.7",
+    "ts-node": "^10.9.2"
   }
 }

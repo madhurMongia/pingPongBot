@@ -3,7 +3,7 @@ import fs from 'fs';
 class PersistenceModule {
   private static state: any;
 
-  public saveState(key: string, value: any): void {
+  private saveState(key: string, value: any): void {
     const filePath = `${key}.json`;
     const data = JSON.stringify(value, null, 2);
     fs.writeFileSync(filePath, data);
@@ -16,7 +16,7 @@ class PersistenceModule {
     return PersistenceModule.state as T;
   }
 
-  public loadState<T extends object>(key: string, defaultValue?: T): T {
+  private loadState<T extends object>(key: string, defaultValue?: T): T {
     const filePath = `${key}.json`;
     try {
       console.log(`Loading state from file: ${filePath}`);
@@ -25,12 +25,12 @@ class PersistenceModule {
         const data = fs.readFileSync(filePath, 'utf8');
         PersistenceModule.state = JSON.parse(data) as T;
       }
-      console.log(`State loaded successfully from file: ${filePath}`);
+      console.log(`State loaded successfully from file`,{filePath,state :PersistenceModule.state});
       return new Proxy(PersistenceModule.state, {
         set: (target: any, prop: string, value: any) => {
+          console.log(`updating state with`, {target, prop, value});
           target[prop] = value;
           this.saveState(key, target);
-          console.log(`State updated and saved to file: ${filePath}`);
           return true;
         },
       });

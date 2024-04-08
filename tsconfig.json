@@ -1,5 +1,7 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
+    "rootDir": ".", 
     "outDir": "dist",
     "target": "es5",
     "module": "commonjs",
@@ -10,5 +12,9 @@
     ],
     "esModuleInterop": true,
     "resolveJsonModule": true,
+    "paths": {
+      "@src/*": ["src/*"]
+    },
+    "removeComments": true,
   }
 }
