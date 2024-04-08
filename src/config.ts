@@ -51,7 +51,7 @@ const config: Config = {
     CHAINSTACK_PRIVATE_KEY: process.env.CHAINSTACK_PRIVATE_KEY || '',
     ALCHEMY_NODE_ENDPOINT: process.env.ALCHEMY_NODE_ENDPOINT || '',
     CHAINSTACK_NODE_ENDPOINT : process.env.CHAINSTACK_NODE_ENDPOINT || '',
-    PUBLIC_NODE_ENDPOINT: process.env.PUBLIC_NODE_ENDPOINT || 'https://ethereum-sepolia-rpc.publicnode.com'
+    PUBLIC_NODE_ENDPOINT: process.env.PUBLIC_NODE_ENDPOINT || 'https://ethereum-sepolia.rpc.subquery.network/public'
 };
 
 export default config;

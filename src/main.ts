@@ -12,18 +12,10 @@ async function main() {
   ];
   const providerManager = new ProviderManager(providerUrls);
   let provider = null;
-  const newBlockQueue: number[] = [];
+  let newBlockArray: number[] = [];
   const seenEvents = new Set();
-  let processingQueue = false;
-
-  while (!provider) {
-    try {
-      provider = await providerManager.getProvider();
-    } catch (error) {
-      console.error("No provider available. Retrying in 10 seconds...");
-      await new Promise((resolve) => setTimeout(resolve, 10000));
-    }
-  }
+  let processingBlocks = false;
+  provider = await providerManager.getProvider();
 
   const storage = new PersistenceModule();
   const contract = new ContractInteractionModule(provider, storage, config);
@@ -35,7 +27,7 @@ async function main() {
   });
   console.log(`Bot state loaded:`, state);
 
-  if (state.pendingTxn && state.pendingTxn.status !== TransactionStatus.Mined) {
+  if (state.pendingTxn && state.pendingTxn.status!== TransactionStatus.Mined) {
     console.log(`Waiting for pending transaction ${state.pendingTxn.txnHash} to be mined...`);
     const txReceipt = await provider.waitForTransaction(state.pendingTxn.txnHash);
     if (txReceipt.status === 1) {
@@ -45,18 +37,20 @@ async function main() {
       await contract.callPong(state.pendingTxn.hash);
     }
   }
-
+   newBlockArray = Array.from({length: currentBlock - state.lastProcessedBlock + 1}, (_, i) => state.lastProcessedBlock + i +1);
+   processingBlocks = true;
+   processNewBlockArray();
   provider.on(config.NEW_BLOCK_EVENT, (blockNumber) => {
-    newBlockQueue.push(blockNumber);
-    if (!processingQueue) {
-      processingQueue = true;
-      processNewBlockQueue();
+    newBlockArray.push(blockNumber);
+    if (!processingBlocks) {
+      processingBlocks = true;
+      processNewBlockArray();
     }
   });
 
-  async function processNewBlockQueue() {
-    while (newBlockQueue.length > 0) {
-      const blockNumber = newBlockQueue.shift()!;
+  async function processNewBlockArray() {
+    while (newBlockArray.length > 0) {
+      const blockNumber = newBlockArray.shift()!;
       console.log(`New block detected: ${blockNumber}`);
       const events = await contract.getFilterEvents(state.lastProcessedBlock, blockNumber);
 
@@ -69,16 +63,28 @@ async function main() {
         state.lastProcessedEventIndex = i + 1;
       }
       state.lastProcessedBlock = blockNumber;
-      state.lastProcessedEventIndex = (await contract.getFilterEvents(blockNumber, blockNumber)).length;
     }
-    processingQueue = false;
+    processingBlocks = false;
   }
 }
 
-main()
-  .then(() => {
-    console.log(`Bot started successfully.`);
-  })
-  .catch((error) => {
-    console.error(`Error starting bot:`, error);
-  });
+function startBot() {
+  let restartsleft = 5;
+  main()
+   .then(() => {
+      console.log(`Bot started successfully.`);
+    })
+   .catch((error) => {
+    console.log(`bot failed with error: ${error.message}`);
+    if(restartsleft <=0) {
+      console.log(`maximum restart attempts reached ,manual restart required`);
+      return;
+    }
+      if (error.message !== 'No available providers') 
+        restartsleft--;
+        console.error(`No provider available. Restarting bot in 10 seconds...`);
+        setTimeout(startBot, 10000);
+    });
+}
+
+startBot();

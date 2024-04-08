@@ -37,6 +37,7 @@ class ProviderManager {
     }
 
     private async initializeProviders(): Promise<void> {
+        console.log(process.pid);
         for (const url of this.providerUrls) {
             try {
                 const provider = await this.connectToProvider(url);
