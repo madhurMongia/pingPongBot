@@ -52,17 +52,18 @@ async function main() {
     while (newBlockArray.length > 0) {
       const blockNumber = newBlockArray.shift()!;
       console.log(`New block detected: ${blockNumber}`);
-      const events = await contract.getFilterEvents(state.lastProcessedBlock, blockNumber);
+      const events = await contract.getFilterEvents(blockNumber, blockNumber);
 
-      for (let i = state.lastProcessedEventIndex; i < events.length; i++) {
+      for (let i = state.lastProcessedEventIndex +1; i < events.length; i++) {
         const event = events[i];
         if(seenEvents.has(event.transactionHash)) continue;
         console.log(`Ping event found in block ${event.blockNumber}, txHash=${event.transactionHash}`);
         await contract.callPong(event.transactionHash);
         seenEvents.add(event.transactionHash);
-        state.lastProcessedEventIndex = i + 1;
+        state.lastProcessedEventIndex = i ;
       }
       state.lastProcessedBlock = blockNumber;
+      state.lastProcessedEventIndex = 0;
     }
     processingBlocks = false;
   }
