@@ -41,7 +41,7 @@ const config: Config = {
     PRIVATE_KEY: process.env.PRIVATE_KEY || '',
     CONTRACT_ADDRESS: process.env.CONTRACT_ADDRESS || '',
     MAX_RETRIES: parseInt(process.env.MAX_RETRIES || '3', 10),
-    LOW_TX_COUNT: parseInt(process.env.LOW_TX_COUNT || '10000', 10),
+    LOW_TX_COUNT: parseInt(process.env.LOW_TX_COUNT || '5000', 10),
     HIGH_TX_COUNT: parseInt(process.env.HIGH_TX_COUNT || '50000', 10),
     NEW_BLOCK_EVENT: 'block',
     PING_EVENT: 'Ping',

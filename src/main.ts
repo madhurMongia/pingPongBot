@@ -41,7 +41,7 @@ async function main() {
 
   newBlockArray = Array.from({ length: currentBlock - state.lastProcessedBlock + 1 }, (_, i) => state.lastProcessedBlock + i + 1);
   processingBlocks = true;
- await processNewBlockArray();
+  await processNewBlockArray();
   provider.on(config.NEW_BLOCK_EVENT, async (blockNumber: number) => {
     newBlockArray.push(blockNumber);
     if (!processingBlocks) {
@@ -55,7 +55,6 @@ async function main() {
       const blockNumber = newBlockArray.shift()!;
       console.log(`New block detected: ${blockNumber}`);
       const events = await contract.getFilterEvents(blockNumber, blockNumber);
-      console.log(`Events: ${events}`);
       for (let i = state.lastProcessedEventIndex + 1; i < events.length; i++) {
         const event = events[i];
         if (seenEvents.has(event.transactionHash)) continue;
@@ -85,7 +84,7 @@ function startBot() {
       }
       if (error.message !== 'No available providers')
         restartsleft--;
-      console.error(`No provider available. Restarting bot in 10 seconds...`);
+      console.error(`Restarting bot in 10 seconds...`);
       setTimeout(startBot, 10000);
     });
 }
