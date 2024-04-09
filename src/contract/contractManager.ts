@@ -50,7 +50,7 @@ class ContractInteractionModule {
                 } else {
                     state.pendingTxn = { txnHash: error.transaction.hash, nonce, status: TransactionStatus.Failed, hash };
                     console.error(`Failed to send pong transaction for hash ${hash} after ${this.config.MAX_RETRIES} retries: ${error.message}`);
-                    process.exit(1);
+                    throw error;
                 }
             }
         };
