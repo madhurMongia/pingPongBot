@@ -3,7 +3,7 @@ import ProviderManager from './ProviderManger';
 import config, { BotState, TransactionStatus } from './config';
 import ContractInteractionModule from './contract/contractManager';
 
-async function main(this: any) {
+async function main() {
   console.log("Initializing bot...");
   const providerUrls = [
     `${config.ALCHEMY_NODE_ENDPOINT}/${config.ALCHEMY_PRIVATE_KEY}`,
@@ -41,14 +41,14 @@ async function main(this: any) {
 
   newBlockArray = Array.from({ length: currentBlock - state.lastProcessedBlock + 1 }, (_, i) => state.lastProcessedBlock + i + 1);
   processingBlocks = true;
-  processNewBlockArray();
-  provider.on(config.NEW_BLOCK_EVENT, ((blockNumber: number) => {
+ await processNewBlockArray();
+  provider.on(config.NEW_BLOCK_EVENT, async (blockNumber: number) => {
     newBlockArray.push(blockNumber);
     if (!processingBlocks) {
       processingBlocks = true;
-      processNewBlockArray();
+      await processNewBlockArray();
     }
-  }).bind(this));
+  });
 
   async function processNewBlockArray() {
     while (newBlockArray.length > 0) {
