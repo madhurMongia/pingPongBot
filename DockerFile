@@ -13,4 +13,4 @@ RUN rm -rf node_modules
 # Install only the production dependencies
 RUN npm install --production 
 # Run the application 
-CMD [ "npm", "start" ] 
+CMD [ "npm", "run","start" ] 
