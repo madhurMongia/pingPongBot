@@ -1,16 +1,16 @@
 # Use the official Node.js 16 Alpine image
-FROM node:16-alpine 
+FROM node:16-alpine
 # Set the working directory to /app
 WORKDIR /app
 # Copy the current directory contents into the working directory
-COPY . . 
+COPY . .
 # Install all dependencies
-RUN npm install 
+RUN npm install
 # Build the application
-RUN npm run build 
+RUN npm run build
 # Remove the development dependencies
-RUN rm -rf node_modules 
+RUN rm -rf node_modules
 # Install only the production dependencies
-RUN npm install --production 
-# Run the application 
-CMD [ "npm", "run","start" ] 
+RUN npm install --production
+# Run the application and redirect logs to output.log
+CMD [ "sh", "-c", "npm run start > output.log 2>&1" ]
