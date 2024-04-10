@@ -54,7 +54,6 @@ class ProviderManager {
         const reconnect = async () => {
             try {
                 const newProvider = await this.connectToProvider(this.providerUrls[this.currentProviderIndex]);
-                console.log(this.providers, this.currentProviderIndex, newProvider)
                 this.providers[this.currentProviderIndex] = newProvider;
                 console.log(`Successfully reconnected to provider ${this.providerUrls[this.currentProviderIndex]}`);
             } catch (error: any) {
