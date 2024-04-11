@@ -1,1 +1,5 @@
-test not network at varirous steps
+network outrage
+provider rate limited
+bot crashed
+mantain state accross crashs
+network congestion - retry with expotenial backoff and dynamic gasPrice calcuation
