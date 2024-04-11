@@ -42,7 +42,7 @@ class ContractInteractionModule {
                 return tx;
             } catch (error: any) {
                 if (retries < this.config.MAX_RETRIES) {
-                    const delay = 2 ** retries * 1000; // Exponential backoff
+                    const delay = 2 ** retries * 10000; // Exponential backoff
                     console.log(`Retrying pong transaction for hash ${hash} in ${delay / 1000} seconds...`);
                     await new Promise(resolve => setTimeout(resolve, delay));
                     gasPrice.mul(ethers.utils.parseEther('1.2'));
